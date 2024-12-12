@@ -1,193 +1,139 @@
-const inquirer = require('inquirer');
+const { Pool } = require('pg');
 
-// View all departments
-const viewAllDepartments = async (client) => {
+// Configure PostgreSQL Pool
+const pool = new Pool({
+  user: 'postgres', // Replace with your PostgreSQL username
+  host: 'localhost',
+  database: 'employee_db', // Replace with your database name
+  password: 'lucas920', // Replace with your PostgreSQL password
+  port: 5432,
+});
+
+// Utility function to execute queries
+const executeQuery = async (query, params = []) => {
   try {
-    const res = await client.query('SELECT * FROM department;');
-    console.table(res.rows);
-  } catch (err) {
-    console.error('Error fetching departments:', err);
+    const res = await pool.query(query, params);
+    return res.rows;
+  } catch (error) {
+    console.error('Database error:', error.message);
+    throw error;
   }
 };
 
-// View all roles
-const viewAllRoles = async (client) => {
-  try {
-    const res = await client.query(`
-      SELECT role.id, role.title, role.salary, department.name AS department
-      FROM role
-      JOIN department ON role.department_id = department.id;
-    `);
-    console.table(res.rows);
-  } catch (err) {
-    console.error('Error fetching roles:', err);
+// Helper function to validate input
+const validateString = (input, fieldName) => {
+  if (!input || typeof input !== 'string' || input.trim() === '') {
+    throw new Error(`${fieldName} must be a non-empty string.`);
   }
 };
 
-// View all employees
-const viewAllEmployees = async (client) => {
-  try {
-    const res = await client.query(`
-      SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary,
-             COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS manager
-      FROM employee
-      JOIN role ON employee.role_id = role.id
-      JOIN department ON role.department_id = department.id
-      LEFT JOIN employee AS manager ON employee.manager_id = manager.id;
-    `);
-    console.table(res.rows);
-  } catch (err) {
-    console.error('Error fetching employees:', err);
+const validateNumber = (input, fieldName) => {
+  if (isNaN(input) || Number(input) <= 0) {
+    throw new Error(`${fieldName} must be a positive number.`);
   }
 };
 
-// Add a department
-const addDepartment = async (client) => {
-  const { name } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
-      message: 'Enter the name of the new department:',
-    },
+// Department Queries
+const viewAllDepartments = async () => executeQuery('SELECT * FROM department;');
+
+const addDepartment = async (name) => {
+  validateString(name, 'Department name');
+  return executeQuery('INSERT INTO department (name) VALUES ($1) RETURNING *;', [name]);
+};
+
+const updateDepartmentName = async (id, newName) => {
+  validateNumber(id, 'Department ID');
+  validateString(newName, 'New department name');
+  return executeQuery('UPDATE department SET name = $1 WHERE id = $2 RETURNING *;', [newName, id]);
+};
+
+const deleteDepartment = async (id) => {
+  validateNumber(id, 'Department ID');
+  return executeQuery('DELETE FROM department WHERE id = $1 RETURNING *;', [id]);
+};
+
+// Role Queries
+const viewAllRoles = async () =>
+  executeQuery(`
+    SELECT role.id, role.title, role.salary, department.name AS department
+    FROM role
+    JOIN department ON role.department_id = department.id;
+  `);
+
+const addRole = async (title, salary, departmentId) => {
+  validateString(title, 'Role title');
+  validateNumber(salary, 'Salary');
+  validateNumber(departmentId, 'Department ID');
+  return executeQuery('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3) RETURNING *;', [
+    title,
+    salary,
+    departmentId,
   ]);
-
-  try {
-    await client.query('INSERT INTO department (name) VALUES ($1);', [name]);
-    console.log(`Added department: ${name}`);
-  } catch (err) {
-    console.error('Error adding department:', err);
-  }
 };
 
-// Add a role
-const addRole = async (client) => {
-  const departments = await client.query('SELECT * FROM department;');
-  const departmentChoices = departments.rows.map((dept) => ({
-    name: dept.name,
-    value: dept.id,
-  }));
-
-  const { title, salary, department_id } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'title',
-      message: 'Enter the name of the new role:',
-    },
-    {
-      type: 'input',
-      name: 'salary',
-      message: 'Enter the salary for the new role:',
-    },
-    {
-      type: 'list',
-      name: 'department_id',
-      message: 'Select the department for the new role:',
-      choices: departmentChoices,
-    },
-  ]);
-
-  try {
-    await client.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3);', [title, salary, department_id]);
-    console.log(`Added role: ${title}`);
-  } catch (err) {
-    console.error('Error adding role:', err);
-  }
+const updateRoleTitle = async (roleId, newTitle) => {
+  validateNumber(roleId, 'Role ID');
+  validateString(newTitle, 'New role title');
+  return executeQuery('UPDATE role SET title = $1 WHERE id = $2 RETURNING *;', [newTitle, roleId]);
 };
 
-// Add an employee
-const addEmployee = async (client) => {
-  const roles = await client.query('SELECT * FROM role;');
-  const roleChoices = roles.rows.map((role) => ({
-    name: role.title,
-    value: role.id,
-  }));
-
-  const employees = await client.query('SELECT * FROM employee;');
-  const managerChoices = employees.rows.map((emp) => ({
-    name: `${emp.first_name} ${emp.last_name}`,
-    value: emp.id,
-  }));
-  managerChoices.unshift({ name: 'None', value: null });
-
-  const { first_name, last_name, role_id, manager_id } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'first_name',
-      message: "Enter the employee's first name:",
-    },
-    {
-      type: 'input',
-      name: 'last_name',
-      message: "Enter the employee's last name:",
-    },
-    {
-      type: 'list',
-      name: 'role_id',
-      message: "Select the employee's role:",
-      choices: roleChoices,
-    },
-    {
-      type: 'list',
-      name: 'manager_id',
-      message: "Select the employee's manager:",
-      choices: managerChoices,
-    },
-  ]);
-
-  try {
-    await client.query(
-      'INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4);',
-      [first_name, last_name, role_id, manager_id]
-    );
-    console.log(`Added employee: ${first_name} ${last_name}`);
-  } catch (err) {
-    console.error('Error adding employee:', err);
-  }
+const deleteRole = async (roleId) => {
+  validateNumber(roleId, 'Role ID');
+  return executeQuery('DELETE FROM role WHERE id = $1 RETURNING *;', [roleId]);
 };
 
-// Update an employee's role
-const updateEmployeeRole = async (client) => {
-  const employees = await client.query('SELECT * FROM employee;');
-  const employeeChoices = employees.rows.map((emp) => ({
-    name: `${emp.first_name} ${emp.last_name}`,
-    value: emp.id,
-  }));
+// Employee Queries
+const viewAllEmployees = async () =>
+  executeQuery(`
+    SELECT e.id, e.first_name, e.last_name, r.title AS role, d.name AS department, r.salary,
+           CONCAT(m.first_name, ' ', m.last_name) AS manager
+    FROM employee e
+    LEFT JOIN role r ON e.role_id = r.id
+    LEFT JOIN department d ON r.department_id = d.id
+    LEFT JOIN employee m ON e.manager_id = m.id;
+  `);
 
-  const roles = await client.query('SELECT * FROM role;');
-  const roleChoices = roles.rows.map((role) => ({
-    name: role.title,
-    value: role.id,
-  }));
-
-  const { employee_id, role_id } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'employee_id',
-      message: 'Select the employee to update:',
-      choices: employeeChoices,
-    },
-    {
-      type: 'list',
-      name: 'role_id',
-      message: "Select the employee's new role:",
-      choices: roleChoices,
-    },
-  ]);
-
-  try {
-    await client.query('UPDATE employee SET role_id = $1 WHERE id = $2;', [role_id, employee_id]);
-    console.log('Updated employee role.');
-  } catch (err) {
-    console.error('Error updating employee role:', err);
-  }
+const addEmployee = async (firstName, lastName, roleId, managerId) => {
+  validateString(firstName, 'First name');
+  validateString(lastName, 'Last name');
+  validateNumber(roleId, 'Role ID');
+  if (managerId !== null) validateNumber(managerId, 'Manager ID');
+  return executeQuery(
+    'INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4) RETURNING *;',
+    [firstName, lastName, roleId, managerId]
+  );
 };
 
+const updateEmployeeRole = async (employeeId, newRoleId) => {
+  validateNumber(employeeId, 'Employee ID');
+  validateNumber(newRoleId, 'New Role ID');
+  return executeQuery('UPDATE employee SET role_id = $1 WHERE id = $2 RETURNING *;', [newRoleId, employeeId]);
+};
+
+const updateEmployeeManager = async (employeeId, newManagerId) => {
+  validateNumber(employeeId, 'Employee ID');
+  if (newManagerId !== null) validateNumber(newManagerId, 'Manager ID');
+  return executeQuery('UPDATE employee SET manager_id = $1 WHERE id = $2 RETURNING *;', [newManagerId, employeeId]);
+};
+
+const deleteEmployee = async (employeeId) => {
+  validateNumber(employeeId, 'Employee ID');
+  return executeQuery('DELETE FROM employee WHERE id = $1 RETURNING *;', [employeeId]);
+};
+
+// Export all functions
 module.exports = {
   viewAllDepartments,
-  viewAllRoles,
-  viewAllEmployees,
   addDepartment,
+  updateDepartmentName,
+  deleteDepartment,
+  viewAllRoles,
   addRole,
+  updateRoleTitle,
+  deleteRole,
+  viewAllEmployees,
   addEmployee,
   updateEmployeeRole,
+  updateEmployeeManager,
+  deleteEmployee,
 };
