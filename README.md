@@ -1,18 +1,23 @@
-
-# Module 10 Challenge: Employee Tracker
+# Employee Tracker
 
 ## Description
+This is a command-line application built in TypeScript to manage a company's employee database. It utilizes PostgreSQL as the database management system and provides functionality to manage departments, roles, and employees. The application allows users to:
 
-This command-line application allows business owners to manage their company's employee database. Built using **Node.js**, **Inquirer**, and **PostgreSQL**, it provides an intuitive interface to view and manage departments, roles, employees, and managers efficiently.
+- View all departments, roles, and employees.
+- Add new departments, roles, and employees.
+- Update employee roles and managers.
+- View employees by manager and department.
+- View the total utilized budget for each department.
+
+The application adheres to a normalized relational database schema for managing the data efficiently.
 
 ---
 
 ## Table of Contents
-
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Database Schema](#database-schema)
+- [Schema Design](#schema-design)
 - [Walkthrough Video](#walkthrough-video)
 - [License](#license)
 
@@ -39,67 +44,93 @@ This command-line application allows business owners to manage their company's e
 
 ## Installation
 
+### Prerequisites
+Ensure you have the following installed:
+- [Node.js](https://nodejs.org/)
+- [PostgreSQL](https://www.postgresql.org/)
+- TypeScript globally installed (`npm install -g typescript`)
+
+### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Azugr/Module-10-Challenge
-   cd Module-10-Challenge
+   git clone <repository-url>
+   cd Main
    ```
+
 2. Install dependencies:
    ```bash
    npm install
    ```
+
 3. Set up the database:
-   - Create a PostgreSQL database.
-   - Execute the SQL scripts in `db/schema.sql` and `db/seeds.sql`.
-4. Configure the database connection in `src/app.js`:
-   ```javascript
-   const client = new Client({
-       connectionString: 'postgresql://username:password@localhost:5432/employee_db',
-   });
+   - Open your PostgreSQL client and run the `db/schema.sql` file to create the database and tables:
+     ```bash
+     psql -U <username> -f db/schema.sql
+     ```
+   - Populate the database with initial data using `db/seeds.sql`:
+     ```bash
+     psql -U <username> -f db/seeds.sql
+     ```
+
+4. Configure environment variables:
+   - Rename `.env.EXAMPLE` to `.env` and update the following placeholders:
+     ```env
+     DB_USER=<your_db_user>
+     DB_PASSWORD=<your_db_password>
+     DB_HOST=localhost
+     DB_PORT=5432
+     DB_NAME=employees_db
+     ```
+
+5. Compile TypeScript to JavaScript:
+   ```bash
+   npx tsc
+   ```
+
+6. Start the application:
+   ```bash
+   node dist/server.js
    ```
 
 ---
 
 ## Usage
 
-1. Run the application:
+1. Start the application:
    ```bash
-   npm start
+   node dist/server.js
    ```
-2. Use the interactive menu to:
-   - Manage **departments**: Add, delete, and update department names.
-   - Manage **roles**: Add, delete, and update role details (title, salary, department).
-   - Manage **employees**: Add, delete, and update employee details (name, role, manager).
-   - Manage **managers**: Add, delete, and update manager information (e.g., name and assigned employees).
+
+2. Navigate through the menus:
+   - Select actions such as viewing, adding, updating, or deleting departments, roles, and employees.
+   - View hierarchical data such as employees by manager or department.
+
+3. Use Ctrl+C to exit the application.
 
 ---
 
-## Database Schema
+## Schema Design
+The database schema is structured as follows:
 
-The database schema is designed with the following core tables:
+![Database Schema](./assets/image_1.png)
 
-### `department`
-| Column | Type        | Description              |
-|--------|-------------|--------------------------|
-| `id`   | SERIAL      | Primary key              |
-| `name` | VARCHAR(30) | Name of the department   |
+### Tables:
+1. **`department`**
+    - `id`: Primary key (unique identifier for departments).
+    - `name`: Unique name for the department (e.g., IT, HR).
 
-### `role`
-| Column          | Type        | Description                          |
-|------------------|-------------|--------------------------------------|
-| `id`            | SERIAL      | Primary key                          |
-| `title`         | VARCHAR(30) | Name of the role                     |
-| `salary`        | DECIMAL     | Salary for the role                  |
-| `department_id` | INTEGER     | Foreign key referencing `department` |
+2. **`role`**
+    - `id`: Primary key (unique identifier for roles).
+    - `title`: Unique name for the role (e.g., Software Engineer).
+    - `salary`: Salary associated with the role.
+    - `department`: Foreign key referencing the `department` table.
 
-### `employee`
-| Column         | Type        | Description                          |
-|-----------------|-------------|--------------------------------------|
-| `id`           | SERIAL      | Primary key                          |
-| `first_name`   | VARCHAR(30) | Employee's first name                |
-| `last_name`    | VARCHAR(30) | Employee's last name                 |
-| `role_id`      | INTEGER     | Foreign key referencing `role`       |
-| `manager_id`   | INTEGER     | Foreign key referencing `employee`   |
+3. **`employee`**
+    - `id`: Primary key (unique identifier for employees).
+    - `first_name`: Employee's first name.
+    - `last_name`: Employee's last name.
+    - `role_id`: Foreign key referencing the `role` table.
+    - `manager_id`: Self-referential foreign key for hierarchical relationships (e.g., an employee's manager).
 
 ---
 
@@ -108,6 +139,41 @@ The database schema is designed with the following core tables:
 
 ---
 
-## License
+## Project Structure
+```
+Main/
+├── assets/
+│   ├── image_1.png        # Database schema diagram
+├── db/
+│   ├── query.sql          # SQL queries for data retrieval
+│   ├── schema.sql         # Database schema
+│   ├── seeds.sql          # Initial seed data
+├── src/
+│   ├── connection.ts      # Database connection file
+│   ├── server.ts          # Main application logic (TypeScript)
+├── .env.EXAMPLE           # Environment variable template
+├── package.json           # Node.js dependencies
+├── tsconfig.json          # TypeScript configuration
+├── README.md              # Project documentation
+```
 
-This project is licensed under the [MIT License](LICENSE).
+---
+
+## Technologies Used
+
+- **Node.js**: JavaScript runtime.
+- **TypeScript**: Static typing for JavaScript.
+- **PostgreSQL**: Relational database management system.
+- **Inquirer.js**: Command-line user interface for managing interactions.
+
+---
+
+## Contributing
+Feel free to contribute to this project by submitting issues or pull requests. Please ensure your code adheres to the existing coding style.
+
+---
+
+## License
+This project is licensed under the MIT License.
+
+
