@@ -12,7 +12,6 @@ LEFT JOIN
 ORDER BY 
     manager_name;
 
-
 -- View Employees by Department
 SELECT 
     employee.id AS employee_id,
@@ -22,27 +21,25 @@ SELECT
     department.name AS department_name
 FROM 
     employee
-JOIN 
+LEFT JOIN 
     role ON employee.role_id = role.id
-JOIN 
+LEFT JOIN 
     department ON role.department_id = department.id
 ORDER BY 
     department.name, employee.last_name, employee.first_name;
 
--- View Department Budget
+- View Department Budget
 SELECT 
     department.id AS department_id,
     department.name AS department_name,
-    SUM(role.salary) AS total_salary_budget
+    COALESCE(SUM(role.salary), 0) AS total_salary_budget
 FROM 
-    role
-JOIN 
-    department ON role.department_id = department.id
-JOIN 
+    department
+LEFT JOIN 
+    role ON role.department_id = department.id
+LEFT JOIN 
     employee ON employee.role_id = role.id
 GROUP BY 
     department.id, department.name
 ORDER BY 
     department.name;
-
-

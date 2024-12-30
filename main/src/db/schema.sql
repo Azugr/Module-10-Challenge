@@ -7,6 +7,10 @@ CREATE DATABASE employees_db;
 -- Connect to the database
 \c employees_db
 
+DROP TABLE IF EXISTS employee;
+DROP TABLE IF EXISTS role;
+DROP TABLE IF EXISTS department;
+
 -- Create the department table
 CREATE TABLE department (
     id SERIAL PRIMARY KEY,
