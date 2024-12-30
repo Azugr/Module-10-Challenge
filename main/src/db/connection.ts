@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Import Pool from node-postgres
 import pg from 'pg';
 const { Pool } = pg;
 
@@ -9,22 +8,24 @@ const { Pool } = pg;
 const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST || 'localhost', 
+  host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME,
-  port: 5432,
+  port: Number(process.env.DB_PORT) || 5432, // Allow port from .env, default to 5432
 });
 
-// Connect to the database and log the status
+// Function to test database connection
 const connectToDb = async (): Promise<void> => {
+  const client = await pool.connect(); // Get a client from the pool
   try {
-    await pool.connect();
     console.log('Connected to the database successfully.');
   } catch (err: unknown) {
     const error = err as Error; // Explicitly cast to Error for better type safety
     console.error('Error connecting to the database:', error.message || error);
     process.exit(1); // Exit the process with failure
+  } finally {
+    client.release(); // Release the client back to the pool
   }
 };
 
-// Export the pool and the connect function for usage in other modules
+// Export the pool and the connect function
 export { pool, connectToDb };
