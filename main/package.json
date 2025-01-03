@@ -4,7 +4,7 @@
   "description": "A command-line application to manage a company's employee database using Node.js, Inquirer, and PostgreSQL.",
   "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node dist/db/index.js",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
