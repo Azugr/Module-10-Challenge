@@ -1,121 +1,105 @@
 import inquirer from 'inquirer';
 import logo from 'asciiart-logo';
-import Db from '../db/server'; 
-
+import Db from '../db/server';
+import { Department } from '../db/server';
 
 const db = new Db();
+
+// Define the ManagerChoice type
+type ManagerChoice = {
+    name: string;
+    value: number | null; 
+};
 
 // Display logo
 function init() {
     const logoText = logo({ name: 'Employee DB' }).render();
     console.log(logoText);
-    loadMainPrompts();
+    loadMainMenu();
 }
 
-// Load main prompts
-function loadMainPrompts() {
-    inquirer.prompt([
-        {
-            type: 'list',
-            name: 'choice',
-            message: 'What would you like to do?',
-            choices: [
-                { name: 'View All Employees', value: 'VIEW_EMPLOYEES' },
-                { name: 'View All Employees By Department', value: 'VIEW_EMPLOYEES_BY_DEPARTMENT' },
-                { name: 'View All Roles', value: 'VIEW_ROLES' },
-                { name: 'Add Employee', value: 'ADD_EMPLOYEE' },
-                { name: 'Remove Employee', value: 'REMOVE_EMPLOYEE' },
-                { name: 'Update Employee Role', value: 'UPDATE_EMPLOYEE_ROLE' },
-                { name: 'Update Employee Manager', value: 'UPDATE_EMPLOYEE_MANAGER' },
-                { name: 'Exit', value: 'EXIT' },
-            ],
-        },
-    ]).then((answers) => {
-        handleUserChoice(answers.choice);
-    }).catch((error) => {
-        console.error('Error loading prompts:', error.message);
-    });
+// Main Menu
+function loadMainMenu() {
+    inquirer
+        .prompt([
+            {
+                type: 'list',
+                name: 'mainChoice',
+                message: 'Main Menu: Select a category:',
+                choices: [
+                    { name: 'Employee', value: 'EMPLOYEE' },
+                    { name: 'Role', value: 'ROLE' },
+                    { name: 'Department', value: 'DEPARTMENT' },
+                    { name: 'Exit', value: 'EXIT' },
+                ],
+            },
+        ])
+        .then((answers) => {
+            switch (answers.mainChoice) {
+                case 'EMPLOYEE':
+                    loadEmployeeMenu();
+                    break;
+                case 'ROLE':
+                    loadRoleMenu();
+                    break;
+                case 'DEPARTMENT':
+                    loadDepartmentMenu();
+                    break;
+                case 'EXIT':
+                    console.log('Goodbye!');
+                    process.exit(0);
+            }
+        });
 }
 
-// Handle user choice
-async function handleUserChoice(choice: string) {
-    switch (choice) {
-        case 'VIEW_EMPLOYEES':
-            try {
-                const employees = await db.viewAllEmployees();
-                console.table(employees);
-            } catch (error: unknown) {
-                if (error instanceof Error) {
-                    console.error('Error fetching employees:', error.message);
-                }
+// Employee Menu
+function loadEmployeeMenu() {
+    inquirer
+        .prompt([
+            {
+                type: 'list',
+                name: 'employeeChoice',
+                message: 'Employee Menu: Select an action:',
+                choices: [
+                    { name: 'Add Employee', value: 'ADD_EMPLOYEE' },
+                    { name: 'Edit Employee', value: 'EDIT_EMPLOYEE' },
+                    { name: 'Delete Employee', value: 'DELETE_EMPLOYEE' },
+                    { name: 'Update Employee Manager', value: 'UPDATE_EMPLOYEE_MANAGER' },
+                    { name: 'View All Employees', value: 'VIEW_EMPLOYEES' },
+                    { name: 'View All Managers', value: 'VIEW_MANAGERS' }, // New option
+                    { name: 'Return to Main Menu', value: 'RETURN' },
+                ],
+            },
+        ])
+        .then(async (answers) => {
+            switch (answers.employeeChoice) {
+                case 'ADD_EMPLOYEE':
+                    await addEmployeePrompt();
+                    break;
+                case 'EDIT_EMPLOYEE':
+                    await editEmployeePrompt();
+                    break;
+                case 'DELETE_EMPLOYEE':
+                    await deleteEmployeePrompt();
+                    break;
+                case 'UPDATE_EMPLOYEE_MANAGER':
+                    await updateEmployeeManagerPrompt();
+                    break;
+                case 'VIEW_EMPLOYEES':
+                    await viewAllEmployees();
+                    break;
+                case 'VIEW_MANAGERS':
+                    await viewAllManagers();
+                    break;
+                case 'RETURN':
+                    loadMainMenu();
+                    break;
             }
-            loadMainPrompts();
-            break;
-
-        case 'VIEW_EMPLOYEES_BY_DEPARTMENT':
-            try {
-                const departments = await db.viewAllDepartments();
-                const departmentChoices = departments.map(department => ({
-                    name: department.name,
-                    value: department.id
-                }));
-
-                const answers = await inquirer.prompt([
-                    {
-                        type: 'list',
-                        name: 'departmentId',
-                        message: 'Select a department:',
-                        choices: departmentChoices
-                    }
-                ]);
-
-                const employeesByDepartment = await db.viewEmployeesByDepartment(answers.departmentId);
-                console.table(employeesByDepartment);
-            } catch (error: unknown) {
-                if (error instanceof Error) {
-                    console.error('Error fetching employees by department:', error.message);
-                }
-            }
-            loadMainPrompts();
-            break;
-
-        case 'VIEW_ROLES':
-            try {
-                const roles = await db.viewAllRoles(); // Ensure this method is defined in your Db class
-                console.table(roles);
-            } catch (error: unknown) {
-                if (error instanceof Error) {
-                    console.error('Error fetching roles:', error.message);
-                }
-            }
-            loadMainPrompts();
-            break;
-
-        case 'ADD_EMPLOYEE':
-            await addEmployeePrompt(); // Ensure this function is defined
-            break;
-
-        case 'REMOVE_EMPLOYEE':
-            await removeEmployeePrompt(); // Ensure this function is defined
-            break;
-
-        case 'UPDATE_EMPLOYEE_ROLE':
-            await updateEmployeeRolePrompt(); // Ensure this function is defined
-            break;
-
-        case 'EXIT':
-            console.log('Goodbye!');
-            process.exit(0);
-
-        default:
-            console.log('Invalid option!');
-            loadMainPrompts();
-    }
+        });
 }
 
-// Define the addEmployeePrompt function
-async function addEmployeePrompt() {
-    try {
+    // Add Employee Function
+    async function addEmployeePrompt() {
         const answers = await inquirer.prompt([
             {
                 type: 'input',
@@ -135,128 +119,483 @@ async function addEmployeePrompt() {
             {
                 type: 'input',
                 name: 'managerId',
-                message: 'Enter the manager ID of the employee (or leave blank if none):',
+                message: 'Enter the manager ID of the employee (leave blank if none):',
             },
         ]);
 
-        const { firstName, lastName, roleId, managerId } = answers;
-        const employee = await db.addEmployee(firstName, lastName, roleId, managerId ? parseInt(managerId) : null);
-        console.log(`Added employee: ${employee.first_name} ${employee.last_name}`);
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.error('Error adding employee:', error.message);
-        } else {
-            console.error('An unknown error occurred');
-        }
-    } finally {
-        loadMainPrompts(); // Ensure this is called to return to the main prompts
-    }
-}
-   
-async function removeEmployeePrompt() {
-    try {
-        // Fetch all employees from the database
-        const employees = await db.viewAllEmployees();
-        
-        if (employees.length === 0) {
-            console.log('No employees available to remove.');
-            return loadMainPrompts();
-        }
+        const managerId = answers.managerId ? parseInt(answers.managerId) : null; // Convert to null if blank
 
-        // Map employees to choices for Inquirer
-        const employeeChoices = employees.map((employee: any) => ({
-            name: `${employee.first_name} ${employee.last_name}`,
-            value: employee.id,
+        try {
+            const newEmployee = await db.addEmployee(answers.firstName, answers.lastName, parseInt(answers.roleId), managerId);
+            console.log(`Employee ${newEmployee.first_name} ${newEmployee.last_name} added successfully.`);
+        } catch (error) {
+            console.error('Error adding employee:', error);
+        }
+        loadEmployeeMenu();
+    }
+
+    // Edit Employee Function
+    async function editEmployeePrompt() {
+        const employees = await db.viewAllEmployees(); // Use the correct method to get all employees
+        const employeeChoices = employees.map(emp => ({
+            name: `${emp.first_name} ${emp.last_name}`,
+            value: emp.employee_id // Use employee_id from the query
         }));
 
-        // Prompt the user to select an employee to remove
-        const answer = await inquirer.prompt([
+        const { employeeId } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'employeeId',
-                message: 'Select the employee to remove:',
+                message: 'Select an employee to edit:',
                 choices: employeeChoices,
             },
         ]);
 
-        const { employeeId } = answer;
+        const updates = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'roleId',
+                message: 'Enter the new role ID (leave blank to keep current):',
+            },
+        ]);
 
-        // Call the DB method to remove the employee
-        await db.deleteEmployee(employeeId);
-        console.log('Employee removed successfully.');
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.error('Error:', error.message);
-        } else {
-            console.error('An unknown error occurred');
+        try {
+            if (updates.roleId) {
+                await db.updateEmployee(employeeId, parseInt(updates.roleId)); // Only update role_id
+                console.log(`Employee role updated successfully.`);
+            } else {
+                console.log('No changes made to employee role.');
+            }
+        } catch (error) {
+            console.error('Error updating employee:', error);
         }
-    } finally {
-        loadMainPrompts();
+        loadEmployeeMenu();
     }
-}
 
-async function updateEmployeeRolePrompt() {
-    try {
-        // Fetch all employees from the database
+    // Delete Employee Function
+    async function deleteEmployeePrompt() {
         const employees = await db.viewAllEmployees();
-        
-        if (employees.length === 0) {
-            console.log('No employees available to update.');
-            return loadMainPrompts();
-        }
-
-        // Map employees to choices for Inquirer
-        const employeeChoices = employees.map((employee: any) => ({
-            name: `${employee.first_name} ${employee.last_name}`,
-            value: employee.id,
+        const employeeChoices = employees.map(emp => ({
+            name: `${emp.first_name} ${emp.last_name}`,
+            value: emp.employee_id // Use employee_id from the query
         }));
 
-        // Fetch all roles from the database
-        const roles = await db.viewAllRoles();
-        
-        if (roles.length === 0) {
-            console.log('No roles available to assign.');
-            return loadMainPrompts();
-        }
+        const { employeeId } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'employeeId',
+                message: 'Select an employee to delete:',
+                choices: employeeChoices,
+            },
+        ]);
 
-        // Map roles to choices for Inquirer
+        try {
+            await db.deleteEmployee(employeeId);
+            console.log(`Employee deleted successfully.`);
+        } catch (error) {
+            console.error('Error deleting employee:', error);
+        }
+        loadEmployeeMenu();
+    }
+
+    //Update employee manager
+    async function updateEmployeeManagerPrompt() {
+        try {
+            // Fetch all employees
+            const employees = await db.viewAllEmployees();
+    
+            // Map employees to prompt choices
+            const employeeChoices = employees.map(emp => ({
+                name: `${emp.first_name} ${emp.last_name}`,
+                value: emp.employee_id,
+            }));
+    
+            // Select the employee whose manager will be updated
+            const { employeeId } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'employeeId',
+                    message: 'Select the employee to update their manager:',
+                    choices: employeeChoices,
+                },
+            ]);
+    
+            // Fetch all managers
+            const managers = await db.viewAllManagers();
+    
+            // Check if there are managers available
+            if (managers.length === 0) {
+                console.log("No managers available to assign.");
+                return loadEmployeeMenu(); // Exit early if no managers
+            }
+    
+            // Map managers to prompt choices
+            const managerChoices = managers
+                .filter(manager => manager.manager_id !== employeeId) // Prevent self-assignment
+                .map(manager => ({
+                    name: `${manager.first_name} ${manager.last_name}`,
+                    value: manager.manager_id,
+                }));
+    
+            // Include an option to unassign the manager
+            managerChoices.unshift({ name: 'None', value: null });
+    
+            let validSelection = false;
+            while (!validSelection) {
+                // Prompt the user to select a new manager
+                const { managerId } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'managerId',
+                        message: 'Select the new manager (or "None" to unassign):',
+                        choices: managerChoices,
+                    },
+                ]);
+    
+                // Check if the selected manager is the same as the employee
+                if (managerId === employeeId) {
+                    console.log("An employee cannot be their own manager. Please select a different manager.");
+                    continue; // Re-prompt for a valid selection
+                }
+                // Update the manager in the database
+                await db.updateEmployeeManager(employeeId, managerId);
+                console.log('Employee manager updated successfully!');
+                validSelection = true; // Set validSelection to true to exit the loop
+            }
+        } catch (error) {
+            console.error("Error updating employee manager:", error);
+        } finally {
+            loadEmployeeMenu(); // Always return to the employee menu
+        }
+    }
+    
+    // View All Employees 
+    async function viewAllEmployees() {
+        try {
+            const employees = await db.viewAllEmployees(); 
+            console.table(employees); 
+        } catch (error) {
+            console.error('Error retrieving employees:', error);
+        }
+        loadEmployeeMenu();
+    }
+
+    //View All Managers
+    async function viewAllManagers() {
+        try {
+            const managers = await db.viewAllManagers(); 
+            if (managers.length > 0) {
+                console.table(managers);
+            } else {
+                console.log('No managers found.');
+            }
+        } catch (error) {
+            console.error('Error viewing managers:', error);
+        }
+        loadEmployeeMenu();
+    }
+    
+
+//Role Menu
+function loadRoleMenu() {
+    inquirer
+        .prompt([
+            {
+                type: 'list',
+                name: 'roleChoice',
+                message: 'Role Menu: Select an action:',
+                choices: [
+                    { name: 'Add Role', value: 'ADD_ROLE' },
+                    { name: 'Edit Role', value: 'EDIT_ROLE' },
+                    { name: 'Delete Role', value: 'DELETE_ROLE' },
+                    { name: 'View All Roles', value: 'VIEW_ROLES' },
+                    { name: 'Return to Main Menu', value: 'RETURN' },
+                ],
+            },
+        ])
+        .then(async (answers) => {
+            try {
+                switch (answers.roleChoice) {
+                    case 'ADD_ROLE':
+                        await addRolePrompt();
+                        break;
+                    case 'EDIT_ROLE':
+                        await editRolePrompt();
+                        break;
+                    case 'DELETE_ROLE':
+                        await deleteRolePrompt();
+                        break;
+                    case 'VIEW_ROLES':
+                        await viewAllRoles();
+                        break;
+                    case 'RETURN':
+                        loadMainMenu();
+                        break;
+                }
+            } catch (error) {
+                console.error('Error loading role menu:', error);
+                loadRoleMenu(); 
+            }
+        });
+}
+
+    // Add Role
+    async function addRolePrompt() {
+        const departments = await db.viewAllDepartments();
+        const departmentChoices = departments.map((dept: Department) => ({
+            name: dept.name,
+            value: dept.id,
+        }));
+
+        const answers = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'title',
+                message: 'Enter the title of the role:',
+                validate: (input) => input ? true : 'Role title cannot be empty.', // Validate title
+            },
+            {
+                type: 'input',
+                name: 'salary',
+                message: 'Enter the salary for this role:',
+                validate: (input) => {
+                    const parsedSalary = parseFloat(input);
+                    return !isNaN(parsedSalary) && parsedSalary > 0 ? true : 'Please enter a valid salary.';
+                }, // Validate salary
+            },
+            {
+                type: 'list',
+                name: 'departmentId',
+                message: 'Select the department for this role:',
+                choices: departmentChoices,
+            },
+        ]);
+
+        try {
+            const salary = parseFloat(answers.salary);
+            await db.addRole(answers.title, salary, answers.departmentId);
+            console.log(`Role "${answers.title}" added successfully.`);
+        } catch (error) {
+            console.error('Error adding role:', error);
+        }
+        loadRoleMenu();
+    }
+
+    //Edit role
+    async function editRolePrompt() {
+        const roles = await db.viewAllRoles();
         const roleChoices = roles.map((role: any) => ({
             name: role.title,
             value: role.id,
         }));
 
-        // Prompt the user to select an employee and a new role
         const answers = await inquirer.prompt([
             {
                 type: 'list',
-                name: 'employeeId',
-                message: 'Select the employee to update:',
-                choices: employeeChoices,
+                name: 'roleId',
+                message: 'Select the role to edit:',
+                choices: roleChoices,
             },
+            {
+                type: 'input',
+                name: 'newTitle',
+                message: 'Enter the new title for the role (leave blank to keep current):',
+            },
+            {
+                type: 'input',
+                name: 'newSalary',
+                message: 'Enter the new salary for the role (leave blank to keep current):',
+            },
+        ]);
+
+        try {
+            const updates: any = {};
+            if (answers.newTitle) updates.title = answers.newTitle;
+            if (answers.newSalary) updates.salary = parseFloat(answers.newSalary);
+
+            if (Object.keys(updates).length > 0) {
+                await db.updateRole(answers.roleId, updates);
+                console.log('Role updated successfully.');
+            } else {
+                console.log('No changes made to the role.');
+            }
+        } catch (error) {
+            console.error('Error editing role:', error);
+        }
+        loadRoleMenu();
+    }
+
+    //Delete role
+    async function deleteRolePrompt() {
+        const roles = await db.viewAllRoles();
+        const roleChoices = roles.map((role: any) => ({
+            name: role.title,
+            value: role.id,
+        }));
+
+        const { roleId } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'roleId',
-                message: 'Select the new role for the employee:',
+                message: 'Select the role to delete:',
                 choices: roleChoices,
             },
         ]);
 
-        const { employeeId, roleId } = answers;
-
-        // Call the DB method to update the employee's role
-        await db.updateEmployeeRole(employeeId, roleId);
-        console.log('Employee role updated successfully.');
-
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.error('Error:', error.message);
-        } else {
-            console.error('An unknown error occurred');
+        try {
+            await db.deleteRole(roleId);
+            console.log('Role deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting role:', error);
         }
-    } finally {
-        loadMainPrompts();
+        loadRoleMenu();
     }
-}
 
-// Call the init function to start the application
+    //View all roles
+    async function viewAllRoles() {
+        try {
+            const roles = await db.viewAllRoles();
+            console.table(roles);
+        } catch (error) {
+            console.error('Error viewing roles:', error);
+        }
+        loadRoleMenu();
+    }
+
+//Department Menu
+    function loadDepartmentMenu() {
+        inquirer
+            .prompt([
+                {
+                    type: 'list',
+                    name: 'departmentChoice',
+                    message: 'Department Menu: Select an action:',
+                    choices: [
+                        { name: 'Add Department', value: 'ADD_DEPARTMENT' },
+                        { name: 'Edit Department', value: 'EDIT_DEPARTMENT' },
+                        { name: 'Delete Department', value: 'DELETE_DEPARTMENT' },
+                        { name: 'View All Departments', value: 'VIEW_DEPARTMENTS' },
+                        { name: 'Return to Main Menu', value: 'RETURN' },
+                    ],
+                },
+            ])
+            .then(async (answers) => {
+                try {
+                    switch (answers.departmentChoice) {
+                        case 'ADD_DEPARTMENT':
+                            await addDepartmentPrompt();
+                            break;
+                        case 'EDIT_DEPARTMENT':
+                            await editDepartmentPrompt();
+                            break;
+                        case 'DELETE_DEPARTMENT':
+                            await deleteDepartmentPrompt();
+                            break;
+                        case 'VIEW_DEPARTMENTS':
+                            await viewAllDepartments();
+                            break;
+                        case 'RETURN':
+                            loadMainMenu();
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error loading department menu:', error);
+                    loadDepartmentMenu(); // Return to menu on error
+                }
+            });
+    }
+    
+    //Add Department
+    async function addDepartmentPrompt() {
+        const { name } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'name',
+                message: 'Enter the name of the department:',
+                validate: (input) => input ? true : 'Department name cannot be empty.', // Validate name
+            },
+        ]);
+
+        try {
+            await db.addDepartment(name);
+            console.log(`Department "${name}" added successfully.`);
+        } catch (error) {
+            console.error('Error adding department:', error);
+        }
+        loadDepartmentMenu();
+    }
+
+    //Edit Department
+    async function editDepartmentPrompt() {
+        const departments = await db.viewAllDepartments();
+        const departmentChoices = departments.map((dept: any) => ({
+            name: dept.name,
+            value: dept.id,
+        }));
+    
+        const answers = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'departmentId',
+                message: 'Select the department to edit:',
+                choices: departmentChoices,
+            },
+            {
+                type: 'input',
+                name: 'newName',
+                message: 'Enter the new name for the department (leave blank to keep current):',
+            },
+        ]);
+    
+        try {
+            if (answers.newName) {
+                await db.updateDepartment(answers.departmentId, answers.newName);
+                console.log('Department updated successfully.');
+            } else {
+                console.log('No changes made to the department.');
+            }
+        } catch (error) {
+            console.error('Error editing department:', error);
+        }
+        loadDepartmentMenu();
+    }
+
+    //Delete department
+    async function deleteDepartmentPrompt() {
+        const departments = await db.viewAllDepartments();
+        const departmentChoices = departments.map((dept: any) => ({
+            name: dept.name,
+            value: dept.id,
+        }));
+    
+        const { departmentId } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'departmentId',
+                message: 'Select the department to delete:',
+                choices: departmentChoices,
+            },
+        ]);
+    
+        try {
+            await db.deleteDepartment(departmentId);
+            console.log('Department deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting department:', error);
+        }
+        loadDepartmentMenu();
+    }
+
+    //View all departments
+    async function viewAllDepartments() {
+        try {
+            const departments = await db.viewAllDepartments();
+            console.table(departments);
+        } catch (error) {
+            console.error('Error viewing departments:', error);
+        }
+        loadDepartmentMenu();
+    }
+    
+// Initialize the application
 init();

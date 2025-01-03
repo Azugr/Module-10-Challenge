@@ -1,13 +1,13 @@
-import { pool } from '../db/connection'; // Ensure this path is correct
+import { Pool } from 'pg';
 
 export interface EmployeeData {
-    id: number;
+    employee_id: number;
     first_name: string;
     last_name: string;
     role: string;
     department: string;
     salary: number;
-    manager: string | null; 
+    manager: string | null;
 }
 
 export interface Department {
@@ -18,185 +18,219 @@ export interface Department {
 export interface Role {
     id: number;
     title: string;
+    salary: number;
+    department_id: number;
 }
 
 export default class Db {
-    // View all employees
-    async viewAllEmployees(): Promise<EmployeeData[]> {
-        try {
-            const query = `
-                SELECT 
-                    employee.id, 
-                    employee.first_name, 
-                    employee.last_name, 
-                    role.title AS role, 
-                    department.name AS department, 
-                    role.salary, 
-                    CONCAT(COALESCE(manager.first_name, 'No Manager'), ' ', COALESCE(manager.last_name, '')) AS manager
-                FROM employee
-                LEFT JOIN role ON employee.role_id = role.id
-                LEFT JOIN department ON role.department_id = department.id
-                LEFT JOIN employee AS manager ON employee.manager_id = manager.id
-                ORDER BY employee.id;
-            `;
-            const { rows } = await pool.query(query);
+    private pool: Pool;
 
-            // Map the rows to the EmployeeData interface
-            return rows.map(row => ({
-                id: row.id,
-                first_name: row.first_name,
-                last_name: row.last_name,
-                role: row.role,
-                department: row.department,
-                salary: row.salary,
-                manager: row.manager || null // Ensure manager is null if not available
-            })) as EmployeeData[]; // Type assertion to EmployeeData[]
-        } catch (error: any) {
-            console.error('Error fetching employees:', error.message);
+    constructor() {
+        this.pool = new Pool({
+            user: 'your_username', // Replace with your PostgreSQL username
+            host: 'localhost',     // Database host
+            database: 'employees_db', // Database name
+            password: 'your_password', // Replace with your PostgreSQL password
+            port: 5432,            // Default PostgreSQL port
+        });
+    }
+
+    // Helper to query the database
+    private async query(sql: string, params: any[] = []): Promise<any[]> {
+        const client = await this.pool.connect();
+        try {
+            const result = await client.query(sql, params);
+            return result.rows;
+        } catch (error) {
+            console.error('Database query error:', error);
             throw error;
+        } finally {
+            client.release();
         }
     }
 
-    // View all departments
-    async viewAllDepartments(): Promise<Department[]> { // Specify the return type
-        const query = `
+    // Add Employee
+    async addEmployee(firstName: string, lastName: string, roleId: number, managerId: number | null): Promise<EmployeeData> {
+        const sql = `
+            INSERT INTO employee (first_name, last_name, role_id, manager_id)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, first_name, last_name, role_id, manager_id;
+        `;
+        const result = await this.query(sql, [firstName, lastName, roleId, managerId]);
+        return result[0];
+    }
+
+    // Update Employee
+    async updateEmployee(employeeId: number, roleId: number): Promise<EmployeeData> {
+        const sql = `
+            UPDATE employee
+            SET role_id = $1
+            WHERE id = $2
+            RETURNING id, first_name, last_name, role_id, manager_id;
+        `;
+        const result = await this.query(sql, [roleId, employeeId]);
+        return result[0];
+    }
+
+    // Delete Employee
+    async deleteEmployee(employeeId: number): Promise<void> {
+        const sql = `
+            DELETE FROM employee
+            WHERE id = $1;
+        `;
+        await this.query(sql, [employeeId]);
+    }
+    
+    //Updadte Employee Manager
+    async updateEmployeeManager(employeeId: number, managerId: number | null): Promise<void> {
+        const sql = `
+            UPDATE employee
+            SET manager_id = $1
+            WHERE id = $2;
+        `;
+        await this.query(sql, [managerId, employeeId]);
+    }
+    
+    // View All Employees
+    async viewAllEmployees(): Promise<EmployeeData[]> {
+        const sql = `
+            SELECT 
+                e.id AS employee_id,
+                e.first_name,
+                e.last_name,
+                r.title AS role,
+                d.name AS department,
+                r.salary,
+                CONCAT(COALESCE(m.first_name, ''), ' ', COALESCE(m.last_name, '')) AS manager
+            FROM employee e
+            LEFT JOIN role r ON e.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee m ON e.manager_id = m.id;
+        `;
+        return this.query(sql);
+    }    
+
+    //View All Managers
+    async viewAllManagers(): Promise<any[]> {
+        const sql = `
+            SELECT DISTINCT
+                m.id AS manager_id,
+                m.first_name,
+                m.last_name,
+                r.title AS role,
+                d.name AS department
+            FROM employee e
+            JOIN employee m ON e.manager_id = m.id
+            LEFT JOIN role r ON m.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            ORDER BY m.last_name, m.first_name;
+        `;
+        return this.query(sql);
+    }
+    
+    // Add Role
+    async addRole(title: string, salary: number, departmentId: number): Promise<Role> {
+        const sql = `
+            INSERT INTO role (title, salary, department_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, title, salary, department_id;
+        `;
+        const result = await this.query(sql, [title, salary, departmentId]);
+        return result[0]; // Return the newly created role
+    }
+
+    // Update Role
+    async updateRole(roleId: number, updates: { title?: string; salary?: number }): Promise<void> {
+        const setClause: string[] = [];
+        const params: any[] = [];
+
+        if (updates.title) {
+            setClause.push(`title = $${params.length + 1}`);
+            params.push(updates.title);
+        }
+        if (updates.salary !== undefined) {
+            setClause.push(`salary = $${params.length + 1}`);
+            params.push(updates.salary);
+        }
+
+        if (setClause.length === 0) {
+            throw new Error('No updates provided');
+        }
+
+        const sql = `
+            UPDATE role
+            SET ${setClause.join(', ')}
+            WHERE id = $${params.length + 1}
+            RETURNING id, title, salary;
+        `;
+        params.push(roleId); 
+
+        await this.query(sql, params);
+    }
+
+    // Delete Role
+    async deleteRole(roleId: number): Promise<void> {
+        const sql = `
+            DELETE FROM role
+            WHERE id = $1;
+        `;
+        await this.query(sql, [roleId]);
+    }
+
+    // View All Roles
+    async viewAllRoles(): Promise<Role[]> {
+        const sql = `
+            SELECT 
+                r.id AS role_id,
+                r.title,
+                r.salary,
+                d.name AS department
+            FROM role r
+            LEFT JOIN department d ON r.department_id = d.id;
+        `;
+        return this.query(sql);
+    }
+
+    // Add Department
+    async addDepartment(name: string): Promise<Department> {
+        const sql = `
+            INSERT INTO department (name)
+            VALUES ($1)
+            RETURNING id, name;
+        `;
+        const result = await this.query(sql, [name]);
+        return result[0]; // Return the newly created department
+    }
+
+    // Update Department
+    async updateDepartment(departmentId: number, newName: string): Promise<void> {
+        const sql = `
+            UPDATE department
+            SET name = $1
+            WHERE id = $2
+            RETURNING id, name;
+        `;
+        await this.query(sql, [newName, departmentId]);
+    }
+
+    // Delete Department
+    async deleteDepartment(departmentId: number): Promise<void> {
+        const sql = `
+            DELETE FROM department
+            WHERE id = $1;
+        `;
+        await this.query(sql, [departmentId]);
+    }
+
+    // View All Departments
+    async viewAllDepartments(): Promise<Department[]> {
+        const sql = `
             SELECT 
                 id AS department_id,
                 name AS department_name
-            FROM 
-                department
-            ORDER BY 
-                department_name;
+            FROM department;
         `;
-        
-        try {
-            const { rows } = await pool.query(query);
-            return rows; // Return the rows
-        } catch (error: any) {
-            console.error('Error fetching departments:', error.message);
-            throw error;
-        }
+        return this.query(sql);
     }
 
-    // View all roles
-    async viewAllRoles(): Promise<Role[]> { // Specify the return type
-        const query = `
-            SELECT 
-                id AS role_id,
-                name AS role_title
-            FROM 
-                role
-            ORDER BY 
-                role_title;
-        `;
-        try {
-            const { rows } = await pool.query(query);
-            return rows; // Return the rows
-        } catch (error: any) {
-            console.error('Error fetching departments:', error.message);
-            throw error;
-        }
-    }
-    
-    // Add an employee
-    async addEmployee(firstName: string, lastName: string, roleId: number, managerId: number | null): Promise<EmployeeData> {
-        try {
-            const query = `
-                INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                VALUES ($1, $2, $3, $4) RETURNING *;
-            `;
-            const { rows } = await pool.query(query, [firstName, lastName, roleId, managerId]);
-            return rows[0]; // Ensure this matches EmployeeData structure
-        } catch (error: any) {
-            console.error('Error adding employee:', error.message);
-            throw error;
-        }
-    }
-
-     // Delete an employee
-     async deleteEmployee(employeeId: number): Promise<void> {
-        try {
-            const query = 'DELETE FROM employee WHERE id = $1;';
-            await pool.query(query, [employeeId]);
-            console.log(`Employee with ID ${employeeId} has been deleted.`);
-        } catch (error: any) {
-            console.error('Error deleting employee:', error.message);
-            throw error; // Rethrow the error for further handling
-        }
-    }
-
-    // Update an employee's role
-    async updateEmployeeRole(employeeId: number, roleId: number): Promise<void> {
-        try {
-            const query = 'UPDATE employee SET role_id = $1 WHERE id = $2;';
-            await pool.query(query, [roleId, employeeId]);
-        } catch (error: any) {
-            console.error('Error updating employee role:', error.message);
-            throw error;
-        }
-    }
-
-    // View Employees by Department
-    async viewEmployeesByDepartment(departmentId: number): Promise<EmployeeData[]> {
-        const query = `
-        SELECT 
-            employee.id AS employee_id,
-            employee.first_name AS employee_first_name,
-            employee.last_name AS employee_last_name,
-            department.id AS department_id,
-            department.name AS department_name
-        FROM 
-            employee
-        JOIN 
-            role ON employee.role_id = role.id
-        JOIN 
-            department ON role.department_id = department.id
-        WHERE 
-            department.id = $1 -- Use parameterized query to prevent SQL injection
-        ORDER BY 
-            employee.last_name, employee.first_name;
-        `;
-        
-        try {
-            const { rows } = await pool.query(query, [departmentId]); // Use pool for queries
-            return rows.map(row => ({
-                id: row.employee_id,
-                first_name: row.employee_first_name,
-                last_name: row.employee_last_name,
-                department: row.department_name, // Ensure this matches EmployeeData structure
-                // Include other fields if necessary
-            })) as EmployeeData[];
-        } catch (error: any) {
-            console.error('Error fetching employees by department:', error.message);
-            throw error; // Rethrow the error for further handling
-        }
-    }
-
-    // View Department Budget
-    async viewDepartmentBudget(): Promise<any[]> { // Adjust return type as necessary
-        const query = `
-        SELECT 
-            department.id AS department_id,
-            department.name AS department_name,
-            COALESCE(SUM(role.salary), 0) AS total_salary_budget
-        FROM 
-            department
-        LEFT JOIN 
-            role ON role.department_id = department.id
-        LEFT JOIN 
-            employee ON employee.role_id = role.id
-        GROUP BY 
-            department.id, department.name
-        ORDER BY 
-            department.name;
-        `;
-        
-        try {
-            const { rows } = await pool.query(query); // Use pool for queries
-            return rows; // Return the rows
-        } catch (error: any) {
-            console.error('Error fetching department budget:', error.message);
-            throw error; // Rethrow the error for further handling
-        }
-    }
 }

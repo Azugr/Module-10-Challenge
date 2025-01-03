@@ -10,7 +10,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT) || 5432, // Allow port from .env, default to 5432
+  port: Number(process.env.DB_PORT) || 5432, 
 });
 
 // Function to test database connection

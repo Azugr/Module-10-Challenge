@@ -17,6 +17,7 @@ SELECT
     employee.id AS employee_id,
     employee.first_name AS employee_first_name,
     employee.last_name AS employee_last_name,
+    role.title AS employee_role,
     department.id AS department_id,
     department.name AS department_name
 FROM 
@@ -28,7 +29,7 @@ LEFT JOIN
 ORDER BY 
     department.name, employee.last_name, employee.first_name;
 
-- View Department Budget
+-- View Department Budget
 SELECT 
     department.id AS department_id,
     department.name AS department_name,
@@ -37,9 +38,9 @@ FROM
     department
 LEFT JOIN 
     role ON role.department_id = department.id
-LEFT JOIN 
-    employee ON employee.role_id = role.id
 GROUP BY 
     department.id, department.name
 ORDER BY 
     department.name;
+
+
