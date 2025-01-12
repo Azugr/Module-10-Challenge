@@ -291,14 +291,14 @@ function loadEmployeeMenu() {
     
             // Map managers to prompt choices
             const managerChoices = managers
-                .filter(manager => manager.manager_id !== employeeId) // Prevent self-assignment
+                .filter(manager => manager.manager_id !== employeeId) 
                 .map(manager => ({
                     name: `${manager.first_name} ${manager.last_name}`,
                     value: manager.manager_id,
                 }));
     
             // Include an option to unassign the manager with a specific value
-            managerChoices.unshift({ name: 'No Manager Assigned', value: -1 }); // Use -1 to indicate no manager
+            managerChoices.unshift({ name: 'No Manager Assigned', value: -1 }); 
     
             let validSelection = false;
             while (!validSelection) {
@@ -315,7 +315,7 @@ function loadEmployeeMenu() {
                 // Check if the selected manager is the same as the employee
                 if (managerId === employeeId) {
                     console.log("An employee cannot be their own manager. Please select a different manager.");
-                    continue; // Re-prompt for a valid selection
+                    continue; 
                 }
     
                 // Confirmation step
@@ -334,14 +334,14 @@ function loadEmployeeMenu() {
                 }
     
                 // Update the manager in the database
-                await db.updateEmployeeManager(employeeId, managerId === -1 ? null : managerId); // Pass null if no manager assigned
+                await db.updateEmployeeManager(employeeId, managerId === -1 ? null : managerId); 
                 console.log('Employee manager updated successfully!');
-                validSelection = true; // Set validSelection to true to exit the loop
+                validSelection = true; 
             }
         } catch (error) {
             console.error("Error updating employee manager:", error);
         } finally {
-            loadEmployeeMenu(); // Always return to the employee menu
+            loadEmployeeMenu(); 
         }
     }
     
@@ -626,7 +626,7 @@ function loadRoleMenu() {
                         { name: 'Edit Department', value: 'EDIT_DEPARTMENT' },
                         { name: 'Delete Department', value: 'DELETE_DEPARTMENT' },
                         { name: 'View All Departments', value: 'VIEW_DEPARTMENTS' },
-                        { name: 'View Department Budget', value: 'VIEW_BUDGET' }, // New Option
+                        { name: 'View Department Budget', value: 'VIEW_BUDGET' }, 
                         { name: 'Return to Main Menu', value: 'RETURN' },
                     ],
                 },
@@ -682,79 +682,106 @@ function loadRoleMenu() {
 
     //Edit Department
     async function editDepartmentPrompt() {
-        const departments = await db.viewAllDepartments();
-        const departmentChoices = departments.map((dept: any) => ({
-            name: dept.name,
-            value: dept.id,
-        }));
-    
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'departmentId',
-                message: 'Select the department to edit:',
-                choices: departmentChoices,
-            },
-            {
-                type: 'input',
-                name: 'newName',
-                message: 'Enter the new name for the department (leave blank to keep current):',
-            },
-        ]);
-    
-        try {
-            if (answers.newName) {
-                await db.updateDepartment(answers.departmentId, answers.newName);
-                console.log('Department updated successfully.');
-            } else {
-                console.log('No changes made to the department.');
-            }
-        } catch (error) {
-            console.error('Error editing department:', error);
-        }
-        loadDepartmentMenu();
-    }
-    
-    // Delete Department
-    async function deleteDepartmentPrompt() {
         console.log('Loading departments, please wait...');
         const departments = await db.viewAllDepartments();
-        const departmentChoices = departments.map((dept: any) => ({
+        console.log(departments); // Log the departments to check their structure
+    
+        if (!departments || departments.length === 0) {
+            console.log('No departments found.');
+            loadDepartmentMenu();
+            return;
+        }
+    
+        const departmentChoices = departments.map(dept => ({
             name: dept.name,
             value: dept.id,
         }));
-
+        console.log(departmentChoices); // Log the choices to verify their structure
+    
         const { departmentId } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'departmentId',
-                message: 'Select the department to delete:',
+                message: 'Select a department to edit:',
                 choices: departmentChoices,
             },
         ]);
+    
+        const { newName } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'newName',
+                message: 'Enter the new name for the department:',
+                validate: input => input ? true : 'Please enter a valid name.',
+            },
+        ]);
+    
+        try {
+            await db.editDepartment(departmentId, newName);
+            console.log(`Department updated successfully to "${newName}".`);
+        } catch (error) {
+            console.error('Error updating department:', error);
+        }
+        
+        loadDepartmentMenu(); 
+    }
 
-        // Confirmation step
+    // Delete Department Function
+    async function deleteDepartmentPrompt() {
+        console.log('Loading departments, please wait...');
+        const departments = await db.viewAllDepartments();
+        console.log(departments); 
+    
+        if (!departments || departments.length === 0) {
+            console.log('No departments found.');
+            loadDepartmentMenu();
+            return;
+        }
+    
+        const departmentChoices = departments.map(dept => ({
+            name: dept.name,
+            value: dept.id,
+        }));
+        console.log(departmentChoices); 
+    
+        const { departmentId } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'departmentId',
+                message: 'Select a department to delete:',
+                choices: departmentChoices,
+            },
+        ]);
+    
+        const departmentToDelete = departmentChoices.find(dept => dept.value === departmentId);
+        if (!departmentToDelete) {
+            console.error('Error: Department not found.');
+            loadDepartmentMenu();
+            return;
+        }
+    
         const confirmDelete = await inquirer.prompt([
             {
                 type: 'confirm',
                 name: 'isConfirmed',
-                message: `Are you sure you want to delete the department "${departmentChoices.find(dept => dept.value === departmentId)?.name}"?`,
+                message: `Are you sure you want to delete the department "${departmentToDelete.name}"?`,
                 default: false,
             },
         ]);
-
+    
         if (!confirmDelete.isConfirmed) {
             console.log('Department deletion canceled.');
-            return loadDepartmentMenu();
+            loadDepartmentMenu();
+            return;
         }
-
+    
         try {
             await db.deleteDepartment(departmentId);
-            console.log('Department deleted successfully.');
+            console.log(`Department deleted successfully.`);
         } catch (error) {
             console.error('Error deleting department:', error);
-        }
-        loadDepartmentMenu();
+        } 
+        loadDepartmentMenu(); 
     }
 
     // View All Departments

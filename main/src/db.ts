@@ -153,8 +153,7 @@ constructor() {
         return this.query(sql);
     }
 
-
-
+    // View All Managers
     async viewAllManagers(): Promise<Manager[]> {
         console.log('Loading managers, please wait...');
         const sql = `
@@ -253,8 +252,8 @@ constructor() {
         }
     }
     
-    // Update Department
-    async updateDepartment(departmentId: number, newName: string): Promise<Department> {
+    // Edit Department
+    async editDepartment(departmentId: number, newName: string): Promise<Department> {
         const sql = `
             UPDATE department
             SET name = $1
@@ -263,9 +262,9 @@ constructor() {
         `;
         try {
             const result = await this.query(sql, [newName, departmentId]);
-            return result[0]; // Return the updated department
+            return result[0]; // Return the edit department
         } catch (error) {
-            console.error('Error updating department:', error);
+            console.error('Error edit department:', error);
             throw error; // Rethrow the error if needed
         }
     }
@@ -278,12 +277,13 @@ constructor() {
         `;
         try {
             await this.query(sql, [departmentId]);
+            console.log(`Department with ID ${departmentId} deleted successfully.`);
         } catch (error) {
             console.error('Error deleting department:', error);
-            throw error; // Rethrow the error if needed
+            throw error; 
         }
     }
-    
+
     // View All Departments
     async viewAllDepartments(): Promise<Department[]> {
         const sql = `
