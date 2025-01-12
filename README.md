@@ -139,7 +139,7 @@ The database schema is structured as follows:
 ---
 
 ## Walkthrough Video
-[Watch the walkthrough video here](#) *(Replace with the actual video link once uploaded)*
+[Watch the walkthrough video here](#) https://drive.google.com/file/d/1fjCoMvP4aCageSa1rA8XFUDQzHrT5rLk/view?usp=sharing
 
 ---
 
