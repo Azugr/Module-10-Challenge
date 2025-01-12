@@ -76,6 +76,7 @@ Ensure you have the following installed:
      ```
 
 4. Configure environment variables:
+   - **Important**: Do not share your `.env` file! Instead, use the `.env.EXAMPLE` file included in the repository.
    - Rename `.env.EXAMPLE` to `.env` and update the following placeholders:
      ```env
      DB_USER=<your_db_user>
