@@ -682,112 +682,90 @@ function loadRoleMenu() {
 
     //Edit Department
     async function editDepartmentPrompt() {
-        console.log('Loading departments, please wait...');
-        const departments = await db.viewAllDepartments();
-        console.log(departments); // Log the departments to check their structure
-    
-        if (!departments || departments.length === 0) {
-            console.log('No departments found.');
-            loadDepartmentMenu();
-            return;
-        }
-    
-        const departmentChoices = departments.map(dept => ({
-            name: dept.department_name,
-            value: dept.department_id,
-        }));
-        console.log(departmentChoices); // Log the choices to verify their structure
-    
-        const { departmentId } = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'departmentId',
-                message: 'Select a department to edit:',
-                choices: departmentChoices,
-            },
-        ]);
-    
-        const { newName } = await inquirer.prompt([
-            {
-                type: 'input',
-                name: 'newName',
-                message: 'Enter the new name for the department:',
-                validate: input => input ? true : 'Please enter a valid name.',
-            },
-        ]);
-    
         try {
-            await db.editDepartment(departmentId, newName);
-            console.log(`Department updated successfully to "${newName}".`);
+            const departments = await db.viewAllDepartments();
+            const departmentChoices = departments.map(dept => ({
+                name: dept.department_name,
+                value: dept.department_id,
+            }));
+    
+            const { departmentId } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'departmentId',
+                    message: 'Select a department to edit:',
+                    choices: departmentChoices,
+                },
+            ]);
+    
+            const { newDepartmentName } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'newDepartmentName',
+                    message: 'Enter a new name for the department:',
+                    validate: input => input.trim() !== '' || 'Name cannot be empty.',
+                },
+            ]);
+    
+            await db.editDepartment(departmentId, newDepartmentName);
+            console.log('Department updated successfully.');
         } catch (error) {
-            console.error('Error updating department:', error);
-        }
-        
+            console.error('Error editing department:', error);
+        }    
         loadDepartmentMenu(); 
     }
 
-    // Delete Department Function
+
     // Delete Department Function
     async function deleteDepartmentPrompt() {
-        const departments = await db.viewAllDepartments(); // Fetch all departments
-        const departmentChoices = departments.map(dept => ({
-            name: dept.department_name, 
-            value: dept.department_id  
-        }));
-
-        const { departmentId } = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'departmentId',
-                message: 'Select a department to delete:',
-                choices: departmentChoices,
-            },
-        ]);
-
-        // Find the department object based on the selected departmentId
-        const departmentToDelete = departmentChoices.find(dept => dept.value === departmentId);
-
-        // Confirmation step
-        if (departmentToDelete) {
-            const confirmDelete = await inquirer.prompt([
+        try {
+            const departments = await db.viewAllDepartments();
+            const departmentChoices = departments.map(dept => ({
+                name: dept.department_name,
+                value: dept.department_id,
+            }));
+    
+            const { departmentId } = await inquirer.prompt([
                 {
-                    type: 'confirm',
-                    name: 'isConfirmed',
-                    message: `Are you sure you want to delete the department ${departmentToDelete.name}?`,
-                    default: false,
+                    type: 'list',
+                    name: 'departmentId',
+                    message: 'Select a department to delete:',
+                    choices: departmentChoices,
                 },
             ]);
-
-            if (!confirmDelete.isConfirmed) {
-                console.log('Department deletion canceled.');
-                loadDepartmentMenu(); 
-                return;
-            }
-
-            try {
-                await db.deleteDepartment(departmentId); 
-                console.log(`Department deleted successfully.`);
-            } catch (error) {
-                console.error('Error deleting department:', error);
-            }
-        } else {
-            console.error('Error: Department not found.');
+    
+            await db.deleteDepartment(departmentId);
+            console.log('Department deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting department:', error);
         }
-
         loadDepartmentMenu(); // Load the department menu again
     }
 
     // View All Departments
-    async function viewAllDepartments() {
-        try {
-            console.log('Loading departments, please wait...');
-            const departments = await db.viewAllDepartments();
-            console.table(departments);
-        } catch (error) {
-            console.error('Error viewing departments:', error);
+async function viewAllDepartments() {
+    try {
+        console.log('Loading departments, please wait...');
+        const departments = await db.viewAllDepartments(); // Fetch all departments
+        console.table(departments); // Log the raw department data
+
+        // Transform for prompt choices
+        const departmentChoices = departments.map(dept => ({
+            name: dept.department_name,
+            value: dept.department_id,
+        }));
+
+        // Conditional logging based on environment
+        if (process.env.NODE_ENV === 'development') {
+            console.log(departmentChoices); // Log the transformed choices if in development
         }
-        loadDepartmentMenu();
+
+        return departmentChoices; // Return choices if needed for further processing
+    } catch (error) {
+        console.error('Error viewing departments:', error);
     }
+    loadDepartmentMenu(); // Ensure this function is clear in its purpose
+}
 
     async function viewDepartmentBudget() {
         try {
