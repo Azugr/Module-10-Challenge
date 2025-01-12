@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import logo from 'asciiart-logo';
 import Db from './db.js'; // Ensure this path is correct
-import { Department } from './db.js'; // Ensure this path is correct
+//import { Department} from './db.js'; // Ensure this path is correct
 
 const db = new Db();
 
@@ -407,102 +407,83 @@ function loadEmployeeMenu() {
             loadEmployeeMenu(); 
         }
     }
+
     
-//Role Menu
-function loadRoleMenu() {
-    inquirer
-        .prompt([
-            {
-                type: 'list',
-                name: 'roleChoice',
-                message: 'Role Menu: Select an action:',
-                choices: [
-                    { name: 'Add Role', value: 'ADD_ROLE' },
-                    { name: 'Edit Role', value: 'EDIT_ROLE' },
-                    { name: 'Delete Role', value: 'DELETE_ROLE' },
-                    { name: 'View All Roles', value: 'VIEW_ROLES' },
-                    { name: 'Return to Main Menu', value: 'RETURN' },
-                ],
-            },
-        ])
-        .then(async (answers) => {
-            try {
-                switch (answers.roleChoice) {
-                    case 'ADD_ROLE':
-                        await addRolePrompt();
-                        break;
-                    case 'EDIT_ROLE':
-                        await editRolePrompt();
-                        break;
-                    case 'DELETE_ROLE':
-                        await deleteRolePrompt();
-                        break;
-                    case 'VIEW_ROLES':
-                        await viewAllRoles();
-                        break;
-                    case 'RETURN':
-                        loadMainMenu();
-                        break;
+    // Role Menu
+    function loadRoleMenu() {
+        inquirer
+            .prompt([
+                {
+                    type: 'list',
+                    name: 'roleChoice',
+                    message: 'Role Menu: Select an action:',
+                    choices: [
+                        { name: 'Add Role', value: 'ADD_ROLE' },
+                        { name: 'Edit Role', value: 'EDIT_ROLE' },
+                        { name: 'Delete Role', value: 'DELETE_ROLE' },
+                        { name: 'View All Roles', value: 'VIEW_ROLES' },
+                        { name: 'Return to Main Menu', value: 'RETURN' },
+                    ],
+                },
+            ])
+            .then(async (answers) => {
+                try {
+                    switch (answers.roleChoice) {
+                        case 'ADD_ROLE':
+                            await addRolePrompt();
+                            break;
+                        case 'EDIT_ROLE':
+                            await editRolePrompt();
+                            break;
+                        case 'DELETE_ROLE':
+                            await deleteRolePrompt();
+                            break;
+                        case 'VIEW_ROLES':
+                            await viewAllRoles();
+                            break;
+                        case 'RETURN':
+                            loadMainMenu();
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error loading role menu:', error);
+                    loadRoleMenu(); // Return to menu on error
                 }
-            } catch (error) {
-                console.error('Error loading role menu:', error);
-                loadRoleMenu(); 
-            }
-        });
-}
+            });
+    }
 
     // Add Role
     async function addRolePrompt() {
-        console.log('Loading departments, please wait...');
-        const departments = await db.viewAllDepartments();
-        const departmentChoices = departments.map((dept: Department) => ({
-            name: dept.department_name,
-            value: dept.department_id,
-        }));
-
-        const answers = await inquirer.prompt([
-            {
-                type: 'input',
-                name: 'title',
-                message: 'Enter the title of the role:',
-                validate: (input) => input ? true : 'Role title cannot be empty.',
-            },
-            {
-                type: 'input',
-                name: 'salary',
-                message: 'Enter the salary for this role:',
-                validate: (input) => {
-                    const parsedSalary = parseFloat(input);
-                    return !isNaN(parsedSalary) && parsedSalary > 0 ? true : 'Please enter a valid salary.';
-                },
-            },
-            {
-                type: 'list',
-                name: 'departmentId',
-                message: 'Select the department for this role:',
-                choices: departmentChoices,
-            },
-        ]);
-
-        // Confirmation step
-        const confirmAdd = await inquirer.prompt([
-            {
-                type: 'confirm',
-                name: 'isConfirmed',
-                message: `Are you sure you want to add the role "${answers.title}" with a salary of ${answers.salary} to department ID ${answers.departmentId}?`,
-                default: true,
-            },
-        ]);
-
-        if (!confirmAdd.isConfirmed) {
-            console.log('Role addition canceled.');
-            return loadRoleMenu();
-        }
-
         try {
-            const salary = parseFloat(answers.salary);
-            await db.addRole(answers.title, salary, answers.departmentId);
-            console.log(`Role "${answers.title}" added successfully.`);
+            const departments = await db.viewAllDepartments();
+            const departmentChoices = departments.map(dept => ({
+                name: dept.department_name,
+                value: dept.department_id,
+            }));
+
+            const { title, salary, departmentId } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'title',
+                    message: 'Enter the title of the role:',
+                    validate: (input) => input ? true : 'Role title cannot be empty.',
+                },
+                {
+                    type: 'input',
+                    name: 'salary',
+                    message: 'Enter the salary for this role:',
+                    validate: (input) => !isNaN(parseFloat(input)) && parseFloat(input) > 0 ? true : 'Please enter a valid salary.',
+                },
+                {
+                    type: 'list',
+                    name: 'departmentId',
+                    message: 'Select the department for this role:',
+                    choices: departmentChoices,
+                },
+            ]);
+
+            await db.addRole(title, parseFloat(salary), departmentId);
+            console.log(`Role "${title}" added successfully.`);
         } catch (error) {
             console.error('Error adding role:', error);
         }
@@ -511,44 +492,39 @@ function loadRoleMenu() {
 
     // Edit Role
     async function editRolePrompt() {
-        console.log('Loading roles, please wait...');
-        const roles = await db.viewAllRoles();
-        const roleChoices = roles.map((role: any) => ({
-            name: role.title,
-            value: role.id,
-        }));
-
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'roleId',
-                message: 'Select the role to edit:',
-                choices: roleChoices,
-            },
-            {
-                type: 'input',
-                name: 'newTitle',
-                message: 'Enter the new title for the role (leave blank to keep current):',
-            },
-            {
-                type: 'input',
-                name: 'newSalary',
-                message: 'Enter the new salary for the role (leave blank to keep current):',
-                validate: (input) => input === '' || !isNaN(parseFloat(input)) ? true : 'Salary must be a number.'
-            },
-        ]);
-
         try {
-            const updates: any = {};
-            if (answers.newTitle) updates.title = answers.newTitle;
-            if (answers.newSalary) updates.salary = parseFloat(answers.newSalary);
+            const roles = await db.viewAllRoles();
+            const roleChoices = roles.map(role => ({
+                name: role.title,
+                value: role.role_id,
+            }));
 
-            if (Object.keys(updates).length > 0) {
-                await db.updateRole(answers.roleId, updates);
-                console.log('Role updated successfully.');
-            } else {
-                console.log('No changes made to the role.');
-            }
+            const { roleId } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'roleId',
+                    message: 'Select a role to edit:',
+                    choices: roleChoices,
+                },
+            ]);
+
+            const { newTitle, newSalary } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'newTitle',
+                    message: 'Enter a new title for the role:',
+                    validate: input => input.trim() !== '' || 'Title cannot be empty.',
+                },
+                {
+                    type: 'input',
+                    name: 'newSalary',
+                    message: 'Enter a new salary for the role:',
+                    validate: input => !isNaN(parseFloat(input)) || 'Salary must be a valid number.',
+                },
+            ]);
+
+            await db.editRole(roleId, newTitle, parseFloat(newSalary));
+            console.log('Role updated successfully.');
         } catch (error) {
             console.error('Error editing role:', error);
         }
@@ -557,38 +533,22 @@ function loadRoleMenu() {
 
     // Delete Role
     async function deleteRolePrompt() {
-        console.log('Loading roles, please wait...');
-        const roles = await db.viewAllRoles();
-        const roleChoices = roles.map((role: any) => ({
-            name: role.title,
-            value: role.id,
-        }));
-
-        const { roleId } = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'roleId',
-                message: 'Select the role to delete:',
-                choices: roleChoices,
-            },
-        ]);
-
-        // Confirmation step
-        const confirmDelete = await inquirer.prompt([
-            {
-                type: 'confirm',
-                name: 'isConfirmed',
-                message: `Are you sure you want to delete the role "${roleChoices.find(role => role.value === roleId)?.name}"?`,
-                default: false,
-            },
-        ]);
-
-        if (!confirmDelete.isConfirmed) {
-            console.log('Role deletion canceled.');
-            return loadRoleMenu();
-        }
-
         try {
+            const roles = await db.viewAllRoles();
+            const roleChoices = roles.map(role => ({
+                name: role.title,
+                value: role.role_id,
+            }));
+
+            const { roleId } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'roleId',
+                    message: 'Select a role to delete:',
+                    choices: roleChoices,
+                },
+            ]);
+
             await db.deleteRole(roleId);
             console.log('Role deleted successfully.');
         } catch (error) {
@@ -612,6 +572,7 @@ function loadRoleMenu() {
         }
         loadRoleMenu();
     }
+
 
     // Department Menu
     function loadDepartmentMenu() {
@@ -759,12 +720,11 @@ async function viewAllDepartments() {
         if (process.env.NODE_ENV === 'development') {
             console.log(departmentChoices); // Log the transformed choices if in development
         }
-
-        return departmentChoices; // Return choices if needed for further processing
-    } catch (error) {
-        console.error('Error viewing departments:', error);
-    }
-    loadDepartmentMenu(); // Ensure this function is clear in its purpose
+        } catch (error) {
+            console.error('Error retrieving employees:', error);
+        } finally {
+            loadDepartmentMenu(); 
+        }
 }
 
     async function viewDepartmentBudget() {

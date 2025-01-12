@@ -172,58 +172,8 @@ constructor() {
         return this.query(sql);
     }
 
-    // Add Role
-    async addRole(title: string, salary: number, departmentId: number): Promise<Role> {
-        const sql = `
-            INSERT INTO role (title, salary, department_id)
-            VALUES ($1, $2, $3)
-            RETURNING id, title, salary, department_id;
-        `;
-        const result = await this.query(sql, [title, salary, departmentId]);
-        return result[0]; // Return the newly created role
-    }
-
-    // Update Role
-    async updateRole(roleId: number, updates: { title?: string; salary?: number }): Promise<void> {
-        const setClause: string[] = [];
-        const params: any[] = [];
-
-        if (updates.title) {
-            setClause.push(`title = $${params.length + 1}`);
-            params.push(updates.title);
-        }
-        if (updates.salary !== undefined) {
-            setClause.push(`salary = $${params.length + 1}`);
-            params.push(updates.salary);
-        }
-
-        if (setClause.length === 0) {
-            throw new Error('No updates provided');
-        }
-
-        const sql = `
-            UPDATE role
-            SET ${setClause.join(', ')}
-            WHERE id = $${params.length + 1}
-            RETURNING id, title, salary;
-        `;
-        params.push(roleId); 
-
-        await this.query(sql, params);
-    }
-
-    // Delete Role
-    async deleteRole(roleId: number): Promise<void> {
-        const sql = `
-            DELETE FROM role
-            WHERE id = $1;
-        `;
-        await this.query(sql, [roleId]);
-    }
-
-    // View All Roles
-    async viewAllRoles(): Promise<Role[]> {
-        console.log('Loading roles, please wait...');
+    //View all roles
+    async viewAllRoles(): Promise<any[]> {
         const sql = `
             SELECT 
                 r.id AS role_id,
@@ -235,6 +185,35 @@ constructor() {
         `;
         return this.query(sql);
     }
+
+    //Add role
+    async addRole(title: string, salary: number, departmentId: number): Promise<void> {
+        const sql = `
+            INSERT INTO role (title, salary, department_id)
+            VALUES ($1, $2, $3);
+        `;
+        await this.query(sql, [title, salary, departmentId]);
+    }
+    
+    //Edit role
+    async editRole(roleId: number, newTitle: string, newSalary: number): Promise<void> {
+        const sql = `
+            UPDATE role
+            SET title = $1, salary = $2
+            WHERE id = $3;
+        `;
+        await this.query(sql, [newTitle, newSalary, roleId]);
+    }
+    
+    //Delete role
+    async deleteRole(roleId: number): Promise<void> {
+        const sql = `
+            DELETE FROM role
+            WHERE id = $1;
+        `;
+        await this.query(sql, [roleId]);
+    }
+    
 
     // Add Department
     async addDepartment(name: string): Promise<Department> {
