@@ -115,6 +115,46 @@ constructor() {
         return this.query(sql);
     }    
 
+    // View Employees by Manager
+    async viewEmployeesByManager(): Promise<EmployeeData[]> {
+        const sql = `
+            SELECT 
+                e.id AS employee_id,
+                e.first_name,
+                e.last_name,
+                r.title AS role,
+                d.name AS department,
+                r.salary,
+                CONCAT(COALESCE(m.first_name, ''), ' ', COALESCE(m.last_name, '')) AS manager
+            FROM employee e
+            LEFT JOIN role r ON e.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee m ON e.manager_id = m.id
+            ORDER BY manager, e.last_name, e.first_name;
+        `;
+        return this.query(sql);
+    }
+
+    // View Employees by Department
+    async viewEmployeesByDepartment(): Promise<EmployeeData[]> {
+        const sql = `
+            SELECT 
+                e.id AS employee_id,
+                e.first_name,
+                e.last_name,
+                r.title AS role,
+                d.name AS department,
+                r.salary
+            FROM employee e
+            LEFT JOIN role r ON e.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            ORDER BY d.name, e.last_name, e.first_name;
+        `;
+        return this.query(sql);
+    }
+
+
+
     async viewAllManagers(): Promise<Manager[]> {
         console.log('Loading managers, please wait...');
         const sql = `
@@ -254,4 +294,19 @@ constructor() {
         `;
         return this.query(sql);
     }
+
+    // View Total Utilized Budget of a Department
+    async viewDepartmentBudget(): Promise<{ department: string; total_budget: number }[]> {
+        const sql = `
+            SELECT 
+                d.name AS department,
+                COALESCE(SUM(r.salary), 0) AS total_budget
+            FROM department d
+            LEFT JOIN role r ON d.id = r.department_id
+            LEFT JOIN employee e ON e.role_id = r.id
+            GROUP BY d.name
+            ORDER BY d.name;
+        `;
+        return this.query(sql);
+    }    
 }

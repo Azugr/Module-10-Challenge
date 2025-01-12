@@ -61,7 +61,9 @@ function loadEmployeeMenu() {
                     { name: 'Delete Employee', value: 'DELETE_EMPLOYEE' },
                     { name: 'Update Employee Manager', value: 'UPDATE_EMPLOYEE_MANAGER' },
                     { name: 'View All Employees', value: 'VIEW_EMPLOYEES' },
-                    { name: 'View All Managers', value: 'VIEW_MANAGERS' }, // New option
+                    { name: 'View All Managers', value: 'VIEW_MANAGERS' }, 
+                    { name: 'View Employees by Manager', value: 'VIEW_BY_MANAGER' }, 
+                    { name: 'View Employees by Department', value: 'VIEW_BY_DEPARTMENT' }, 
                     { name: 'Return to Main Menu', value: 'RETURN' },
                 ],
             },
@@ -85,6 +87,12 @@ function loadEmployeeMenu() {
                     break;
                 case 'VIEW_MANAGERS':
                     await viewAllManagers();
+                    break;
+                case 'VIEW_BY_MANAGER': 
+                    await viewEmployeesByManager();
+                    break;
+                case 'VIEW_BY_DEPARTMENT': 
+                    await viewEmployeesByDepartment();
                     break;
                 case 'RETURN':
                     loadMainMenu();
@@ -337,6 +345,52 @@ function loadEmployeeMenu() {
         }
     }
     
+    // View All Employees 
+    async function viewAllEmployees() {
+        try {
+            console.log('Loading employees, please wait...');
+            const employees = await db.viewAllEmployees(); 
+            console.table(employees); 
+        } catch (error) {
+            console.error('Error retrieving employees:', error);
+        } finally {
+            loadEmployeeMenu(); 
+        }
+    }
+
+    async function viewEmployeesByManager() {
+        try {
+            console.log('Loading employees by manager, please wait...');
+            const employees = await db.viewEmployeesByManager(); 
+            if (employees.length > 0) {
+                console.table(employees); 
+            } else {
+                console.log('No employees found.');
+            }
+        } catch (error) {
+            console.error('Error viewing employees by manager:', error);
+        } finally {
+            loadEmployeeMenu(); // Return to the Employee Menu
+        }
+    }
+    
+    async function viewEmployeesByDepartment() {
+        try {
+            console.log('Loading employees by department, please wait...');
+            const employees = await db.viewEmployeesByDepartment(); 
+            if (employees.length > 0) {
+                console.table(employees);
+            } else {
+                console.log('No employees found.');
+            }
+        } catch (error) {
+            console.error('Error viewing employees by department:', error);
+        } finally {
+            loadEmployeeMenu(); 
+        }
+    }
+    
+
     // View All Managers
     async function viewAllManagers() {
         try {
@@ -349,19 +403,6 @@ function loadEmployeeMenu() {
             }
         } catch (error) {
             console.error('Error viewing managers:', error);
-        } finally {
-            loadEmployeeMenu(); 
-        }
-    }
-
-    // View All Employees 
-    async function viewAllEmployees() {
-        try {
-            console.log('Loading employees, please wait...');
-            const employees = await db.viewAllEmployees(); 
-            console.table(employees); 
-        } catch (error) {
-            console.error('Error retrieving employees:', error);
         } finally {
             loadEmployeeMenu(); 
         }
@@ -585,6 +626,7 @@ function loadRoleMenu() {
                         { name: 'Edit Department', value: 'EDIT_DEPARTMENT' },
                         { name: 'Delete Department', value: 'DELETE_DEPARTMENT' },
                         { name: 'View All Departments', value: 'VIEW_DEPARTMENTS' },
+                        { name: 'View Department Budget', value: 'VIEW_BUDGET' }, // New Option
                         { name: 'Return to Main Menu', value: 'RETURN' },
                     ],
                 },
@@ -604,6 +646,9 @@ function loadRoleMenu() {
                         case 'VIEW_DEPARTMENTS':
                             await viewAllDepartments();
                             break;
+                        case 'VIEW_BUDGET': // New Case
+                            await viewDepartmentBudget();
+                            break;
                         case 'RETURN':
                             loadMainMenu();
                             break;
@@ -614,7 +659,7 @@ function loadRoleMenu() {
                 }
             });
     }
-
+    
     //Add Department
     async function addDepartmentPrompt() {
         const { name } = await inquirer.prompt([
@@ -724,5 +769,21 @@ function loadRoleMenu() {
         loadDepartmentMenu();
     }
 
+    async function viewDepartmentBudget() {
+        try {
+            console.log('Loading department budgets, please wait...');
+            const budgets = await db.viewDepartmentBudget(); // Call the database method
+            if (budgets.length > 0) {
+                console.table(budgets); // Display the budget data in a table
+            } else {
+                console.log('No departments found or no budgets to display.');
+            }
+        } catch (error) {
+            console.error('Error viewing department budgets:', error);
+        } finally {
+            loadDepartmentMenu(); // Return to the Department Menu
+        }
+    }
+    
 // Initialize the application
 init();

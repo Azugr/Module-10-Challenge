@@ -19,6 +19,9 @@ The application adheres to a normalized relational database schema for managing 
 - [Usage](#usage)
 - [Schema Design](#schema-design)
 - [Walkthrough Video](#walkthrough-video)
+- [Project Structure](#project-structure)
+- [Technologies Used](#technologies-used)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -53,7 +56,7 @@ Ensure you have the following installed:
 ### Steps
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Azugr/Module-10-Challenge
    cd Main
    ```
 
@@ -112,7 +115,7 @@ Ensure you have the following installed:
 ## Schema Design
 The database schema is structured as follows:
 
-![Database Schema](./assets/image_1.png)
+![Database Schema](./assets/image.png) *(Replace with the correct path if necessary)*
 
 ### Tables:
 1. **`department`**
@@ -135,7 +138,7 @@ The database schema is structured as follows:
 ---
 
 ## Walkthrough Video
-[Watch the walkthrough video here](#) *(Replace with video link)*
+[Watch the walkthrough video here](#) *(Replace with the actual video link once uploaded)*
 
 ---
 
@@ -143,17 +146,30 @@ The database schema is structured as follows:
 ```
 Main/
 ├── assets/
-│   ├── image_1.png        # Database schema diagram
-├── db/
-│   ├── query.sql          # SQL queries for data retrieval
-│   ├── schema.sql         # Database schema
-│   ├── seeds.sql          # Initial seed data
+│   ├── image.png         # Database schema diagram
+├── main/
+│   ├── db/
+│   │   ├── queries.sql    # Additional SQL queries
+│   │   ├── schema.sql     # Database schema
+│   │   ├── seed.sql       # Initial seed data
+│   │   ├── tables.sql     # Table creation scripts
+│   ├── dist/
+│   │   ├── connection.js  # Compiled database connection logic
+│   │   ├── db.js          # Compiled database methods
+│   │   ├── index.js       # Compiled application entry point
+│   │   ├── server.js      # Compiled server logic
 ├── src/
+│   ├── types/             # TypeScript type definitions
 │   ├── connection.ts      # Database connection file
-│   ├── server.ts          # Main application logic (TypeScript)
+│   ├── db.ts              # Database methods
+│   ├── index.ts           # Main application logic (TypeScript)
+├── .env                   # Environment variables
 ├── .env.EXAMPLE           # Environment variable template
 ├── package.json           # Node.js dependencies
+├── package-lock.json      # Lockfile for npm dependencies
 ├── tsconfig.json          # TypeScript configuration
+├── .gitignore             # Git ignore file
+├── LICENSE                # License information
 ├── README.md              # Project documentation
 ```
 
@@ -175,5 +191,3 @@ Feel free to contribute to this project by submitting issues or pull requests. P
 
 ## License
 This project is licensed under the MIT License.
-
-
