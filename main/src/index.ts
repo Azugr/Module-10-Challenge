@@ -456,8 +456,8 @@ function loadRoleMenu() {
         console.log('Loading departments, please wait...');
         const departments = await db.viewAllDepartments();
         const departmentChoices = departments.map((dept: Department) => ({
-            name: dept.name,
-            value: dept.id,
+            name: dept.department_name,
+            value: dept.department_id,
         }));
 
         const answers = await inquirer.prompt([
@@ -646,7 +646,7 @@ function loadRoleMenu() {
                         case 'VIEW_DEPARTMENTS':
                             await viewAllDepartments();
                             break;
-                        case 'VIEW_BUDGET': // New Case
+                        case 'VIEW_BUDGET': 
                             await viewDepartmentBudget();
                             break;
                         case 'RETURN':
@@ -693,8 +693,8 @@ function loadRoleMenu() {
         }
     
         const departmentChoices = departments.map(dept => ({
-            name: dept.name,
-            value: dept.id,
+            name: dept.department_name,
+            value: dept.department_id,
         }));
         console.log(departmentChoices); // Log the choices to verify their structure
     
@@ -727,23 +727,14 @@ function loadRoleMenu() {
     }
 
     // Delete Department Function
+    // Delete Department Function
     async function deleteDepartmentPrompt() {
-        console.log('Loading departments, please wait...');
-        const departments = await db.viewAllDepartments();
-        console.log(departments); 
-    
-        if (!departments || departments.length === 0) {
-            console.log('No departments found.');
-            loadDepartmentMenu();
-            return;
-        }
-    
+        const departments = await db.viewAllDepartments(); // Fetch all departments
         const departmentChoices = departments.map(dept => ({
-            name: dept.name,
-            value: dept.id,
+            name: dept.department_name, 
+            value: dept.department_id  
         }));
-        console.log(departmentChoices); 
-    
+
         const { departmentId } = await inquirer.prompt([
             {
                 type: 'list',
@@ -752,36 +743,38 @@ function loadRoleMenu() {
                 choices: departmentChoices,
             },
         ]);
-    
+
+        // Find the department object based on the selected departmentId
         const departmentToDelete = departmentChoices.find(dept => dept.value === departmentId);
-        if (!departmentToDelete) {
+
+        // Confirmation step
+        if (departmentToDelete) {
+            const confirmDelete = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'isConfirmed',
+                    message: `Are you sure you want to delete the department ${departmentToDelete.name}?`,
+                    default: false,
+                },
+            ]);
+
+            if (!confirmDelete.isConfirmed) {
+                console.log('Department deletion canceled.');
+                loadDepartmentMenu(); 
+                return;
+            }
+
+            try {
+                await db.deleteDepartment(departmentId); 
+                console.log(`Department deleted successfully.`);
+            } catch (error) {
+                console.error('Error deleting department:', error);
+            }
+        } else {
             console.error('Error: Department not found.');
-            loadDepartmentMenu();
-            return;
         }
-    
-        const confirmDelete = await inquirer.prompt([
-            {
-                type: 'confirm',
-                name: 'isConfirmed',
-                message: `Are you sure you want to delete the department "${departmentToDelete.name}"?`,
-                default: false,
-            },
-        ]);
-    
-        if (!confirmDelete.isConfirmed) {
-            console.log('Department deletion canceled.');
-            loadDepartmentMenu();
-            return;
-        }
-    
-        try {
-            await db.deleteDepartment(departmentId);
-            console.log(`Department deleted successfully.`);
-        } catch (error) {
-            console.error('Error deleting department:', error);
-        } 
-        loadDepartmentMenu(); 
+
+        loadDepartmentMenu(); // Load the department menu again
     }
 
     // View All Departments

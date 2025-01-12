@@ -5,14 +5,14 @@ export interface EmployeeData {
     first_name: string;
     last_name: string;
     role: string;
-    department: string;
+    department_name: string;
     salary: number;
     manager: string | null;
 }
 
 export interface Department {
-    id: number;
-    name: string;
+    department_id: number;
+    department_name: string;
 }
 
 export interface Role {
@@ -27,7 +27,7 @@ export interface Manager {
     first_name: string;
     last_name: string;
     role: string; 
-    department: string; 
+    department_name: string; 
 }
 
 export interface ManagerChoice {
@@ -245,10 +245,10 @@ constructor() {
         `;
         try {
             const result = await this.query(sql, [name]);
-            return result[0]; // Return the newly created department
+            return result[0]; 
         } catch (error) {
             console.error('Error adding department:', error);
-            throw error; // Rethrow the error if needed
+            throw error; 
         }
     }
     
